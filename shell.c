@@ -43,8 +43,19 @@ int getcmd(char *prompt, char *args[], int *background) {
         *background = 0;
     }
 
-
-
-    return 0;
+    while ((token = strsep(&line, " \t\n")) != NULL) {
+        // Find the first non standard ASCII Text chars and/or 'SPACE' and end the token there
+        for (int j = 0; j < strlen(token); j++) {
+            if (token[j] <= 32) { // 32 = ASCII SPACE
+                token[j] = '\0';
+            }
+        }
+        // If the token is not empty, add to set of args and increment i for the next token
+        if (strlen(token) > 0) {
+            args[i++] = token;
+        }
+    }
+    // Return the number of arguments in the command
+    return i;
 }
 

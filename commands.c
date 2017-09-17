@@ -7,7 +7,9 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include "commands.h"
-#define READ_MODE "r"
+#include "process/management.h"
+
+#define CWD "./"
 command checkCommand(char *command) {
     if (strcmp(command, "cd") == 0) return CD;
     if (strcmp(command, "ls") == 0) return LS;
@@ -22,8 +24,9 @@ command checkCommand(char *command) {
 void listDirectory() {
     DIR *dir;
     struct dirent *entry;
-    dir = opendir("./");
+    dir = opendir(CWD);
     if (dir != NULL) {
+
         while ((entry = readdir(dir))) {
             printf("\t\t%s\n", entry->d_name);
         }
@@ -34,19 +37,34 @@ void listDirectory() {
 }
 
 void concatenate(char* fileName) {
-    FILE *filePtr;
-    char character;
-    filePtr = fopen(fileName, READ_MODE);
-    if (filePtr == NULL) {
-        printf("ERROR: Cannot open file %s\n", fileName);
+    int fileDesc;
+    char *buffer;
+    fileDesc = open(fileName, O_RDONLY, S_IRUSR);
+    if (fileDesc == -1) {
+        perror("ERROR: Invalid file");
         return;
     }
-    character = (char) fgetc(filePtr);
-    while (character != EOF) {
-        printf("%c", character);
-        character = (char) fgetc(filePtr);
+    __off_t fileSize;
+    if ((fileSize = fSize(fileName)) != -1) {
+        buffer = malloc((size_t) fileSize);
+        if (buffer == NULL) {
+            errno = 12;
+            perror("ERROR: Could not allocate enough memory to the buffer");
+            return;
+        }
+        while (read(fileDesc, buffer, (size_t) fileSize) > 0) {
+            write(0, buffer, (size_t) fileSize);
+        }
+        if (read(fileDesc, buffer, (size_t) fileSize) < 0) {
+            perror("ERROR: Something went wrong while reading the file.");
+        } else {
+            close(fileDesc);
+            free(buffer);
+        }
+    } else {
+        errno = 1;
+        perror("ERROR: Could not determine file size");
     }
-    fclose(filePtr);
 }
 
 void copy(char* source, char *destination) {
@@ -65,6 +83,11 @@ void copy(char* source, char *destination) {
     __off_t sourceSize;
     if ((sourceSize = fSize(source)) != -1) {
         buffer = malloc((size_t) sourceSize);
+        if (buffer == NULL) {
+            errno = 12;
+            perror("ERROR: Could not allocate enough memory to buffer");
+            return;
+        }
         while (read(sourceDesc, buffer, (size_t) sourceSize) > 0) {
             write(targetDesc, buffer, (size_t) sourceSize);
         }
@@ -75,6 +98,9 @@ void copy(char* source, char *destination) {
             close(targetDesc);
             free(buffer);
         }
+    } else {
+        errno = 1;
+        perror("ERROR: Could not determine file size.");
     }
 }
 

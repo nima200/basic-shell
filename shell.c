@@ -2,12 +2,8 @@
 #include <memory.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <dirent.h>
 #include <wait.h>
-#include <sys/stat.h>
-#include <syscall.h>
 #include "process/management.h"
-#include "commands.h"
 #include "shell.h"
 
 int main(void) {
@@ -17,9 +13,8 @@ int main(void) {
     // TODO: Implement CWD prompt
     while (1) {
         background = 0;
-        int argCount = getCmd("\u03BB\t", args, &background);
+        getCmd("\u03BB\t", args, &background);
         executeCmd(args, &background, &jobs);
-
     }
 }
 /**
@@ -151,10 +146,25 @@ void executeCmd(char **args, const int *background, process **jobList) {
             if (chdir(args[1]) == -1) {
                 printf("ERROR: Invalid directory: %s\n", args[1]);
             }
+
             break;
         }
-        case fg:
-            break;
+        case fg:{
+            if (args[1] == NULL) {
+                // TODO: bring most recent job to fg
+                return;
+            } else {
+                pid_t pid = getJob(*jobList, atoi(args[1]));
+                if (pid == -1) {
+                    printf("ERROR: Invalid job index. No job found with index %s\n", args[1]);
+                } else {
+                    flush(jobList);
+                    foreground(jobList, atoi(args[1]));
+                    waitpid(pid, NULL, 0);
+                }
+                return;
+            }
+        }
         case jobs:
             showJobs(*jobList);
             flush(jobList);

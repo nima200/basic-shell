@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include "commands.h"
-#include "process/management.h"
 
 #define CWD "./"
 command checkCommand(char *command) {

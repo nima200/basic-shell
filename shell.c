@@ -12,13 +12,13 @@
 
 int main(void) {
     char **args = malloc(20 * sizeof(char*));
-    struct process* jobs = createNewJob();
+    struct process* jobs = NULL;
     int background;
     // TODO: Implement CWD prompt
     while (1) {
         background = 0;
         int argCount = getCmd("\u03BB\t", args, &background);
-        executeCmd(args, &background, jobs);
+        executeCmd(args, &background, &jobs);
 
     }
 }
@@ -93,11 +93,12 @@ int parseCmd(char **args, char **line) {
     return i;
 }
 
-void createChildProcess(const command *typeOfCommand, char **params, const int *background, process *jobList) {
+void createChildProcess(char *stringCommand, char **params, const int *background, process **jobList) {
     pid_t PID = fork();
+    const command command= checkCommand(stringCommand);
     switch (PID) {
         case 0:
-            switch (*typeOfCommand) {
+            switch (command) {
                     case ls:{
                         listDirectory();
                         exit(0);
@@ -112,7 +113,9 @@ void createChildProcess(const command *typeOfCommand, char **params, const int *
                     case fg:break;
                     case jobs:break;
                     case EXIT:break;
-                    case external:break;
+                    case external:
+                        execvp(stringCommand, params);
+                        exit(0);
                 }
             break;
         default:
@@ -122,8 +125,7 @@ void createChildProcess(const command *typeOfCommand, char **params, const int *
                     waitpid(PID, NULL, 0);
                     break;
                 default:
-                    pushJob(jobList, PID, typeOfCommand);
-                    // Parent does nothing and continues running
+                    pushJob(jobList, PID, stringCommand);
                     return;
             }
             break;
@@ -132,14 +134,14 @@ void createChildProcess(const command *typeOfCommand, char **params, const int *
 
 }
 
-void executeCmd(char **args, const int *background, process *jobList) {
+void executeCmd(char **args, const int *background, process **jobList) {
     // Find whether the command is a system call 'internal' command or to be executed externally
     command command = checkCommand(args[0]);
     switch (command) {
         case ls:
         case cat:
         case cp:
-            createChildProcess(&command, args + 1, background, jobList);
+            createChildProcess(args[0], args + 1, background, jobList);
             break;
         case cd: {
             if (args[1] == NULL) {
@@ -154,13 +156,14 @@ void executeCmd(char **args, const int *background, process *jobList) {
         case fg:
             break;
         case jobs:
+            showJobs(*jobList);
             flush(jobList);
-            showJobs(jobList);
             break;
         case EXIT:
             free(args);
             exit(0);
         case external:
+            createChildProcess(args[0], args, background, jobList);
             break;
     }
 }

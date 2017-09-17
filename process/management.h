@@ -1,13 +1,17 @@
 #ifndef ASSIGNMENT1_MANAGEMENT_H
 #define ASSIGNMENT1_MANAGEMENT_H
-#define MAX_PROCESS_COUNT 1000
+
 #include <unistd.h>
+#include "../commands.h"
+
 typedef struct process {
     pid_t id;
+    const char *command;
     struct process* next;
     struct process* previous;
 } process;
 process* createNewJob();
-void pushJob(struct process *job, pid_t PID);
+void pushJob(struct process *job, pid_t PID, const command *command);
 void flush(struct process *job);
+void showJobs(struct process *job);
 #endif //ASSIGNMENT1_MANAGEMENT_H

@@ -11,14 +11,14 @@
 
 #define CWD "./"
 command checkCommand(char *command) {
-    if (strcmp(command, "cd") == 0) return CD;
-    if (strcmp(command, "ls") == 0) return LS;
-    if (strcmp(command, "cat") == 0) return CAT;
-    if (strcmp(command, "cp") == 0) return CP;
-    if (strcmp(command, "fg") == 0) return FG;
-    if (strcmp(command, "jobs") == 0) return JOBS;
+    if (strcmp(command, COMMAND_STRING[cd]) == 0) return cd;
+    if (strcmp(command, COMMAND_STRING[ls]) == 0) return ls;
+    if (strcmp(command, COMMAND_STRING[cat]) == 0) return cat;
+    if (strcmp(command, COMMAND_STRING[cp]) == 0) return cp;
+    if (strcmp(command, COMMAND_STRING[fg]) == 0) return fg;
+    if (strcmp(command, COMMAND_STRING[jobs]) == 0) return jobs;
     if (strcmp(command, "exit") == 0) return EXIT;
-    return EXTERNAL;
+    return external;
 }
 
 void listDirectory() {

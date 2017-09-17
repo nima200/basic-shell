@@ -93,27 +93,26 @@ int parseCmd(char **args, char **line) {
     return i;
 }
 
-void createChildProcess(const command *typeOfCommand, char **params, const int *background, process *jobs) {
+void createChildProcess(const command *typeOfCommand, char **params, const int *background, process *jobList) {
     pid_t PID = fork();
     switch (PID) {
         case 0:
             switch (*typeOfCommand) {
-                    case LS:{
+                    case ls:{
                         listDirectory();
                         exit(0);
                     }
-                    case CD:break;
-
-                    case CAT:
+                    case cd:break;
+                    case cat:
                         concatenate(params[0]);
                         exit(0);
-                    case CP:
+                    case cp:
                         copy(params[0], params[1]);
                         exit(0);
-                    case FG:break;
-                    case JOBS:break;
+                    case fg:break;
+                    case jobs:break;
                     case EXIT:break;
-                    case EXTERNAL:break;
+                    case external:break;
                 }
             break;
         default:
@@ -123,9 +122,8 @@ void createChildProcess(const command *typeOfCommand, char **params, const int *
                     waitpid(PID, NULL, 0);
                     break;
                 default:
-                    pushJob(jobs, PID);
+                    pushJob(jobList, PID, typeOfCommand);
                     // Parent does nothing and continues running
-                    printf("hi");
                     return;
             }
             break;
@@ -134,16 +132,16 @@ void createChildProcess(const command *typeOfCommand, char **params, const int *
 
 }
 
-void executeCmd(char **args, const int *background, process *jobs) {
+void executeCmd(char **args, const int *background, process *jobList) {
     // Find whether the command is a system call 'internal' command or to be executed externally
     command command = checkCommand(args[0]);
     switch (command) {
-        case LS:
-        case CAT:
-        case CP:
-            createChildProcess(&command, args + 1, background, jobs);
+        case ls:
+        case cat:
+        case cp:
+            createChildProcess(&command, args + 1, background, jobList);
             break;
-        case CD: {
+        case cd: {
             if (args[1] == NULL) {
                 chdir(getenv("HOME"));
                 return;
@@ -153,14 +151,16 @@ void executeCmd(char **args, const int *background, process *jobs) {
             }
             break;
         }
-        case FG:
+        case fg:
             break;
-        case JOBS:
+        case jobs:
+            flush(jobList);
+            showJobs(jobList);
             break;
         case EXIT:
             free(args);
             exit(0);
-        case EXTERNAL:
+        case external:
             break;
     }
 }

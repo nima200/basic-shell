@@ -7,8 +7,7 @@
 void pushJob(process **job, pid_t PID, const char *command) {
     process* newJob = (process*) malloc(sizeof(process));
     if (newJob == NULL) {
-        errno = 12;
-        perror("ERROR: Could not allocate enough memory to the job");
+        printf("ERROR: Could not allocate enough memory to the job\n");
         return;
     }
     newJob->id = PID;

@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <wait.h>
-#include <errno.h>
 #include "management.h"
 
 void pushJob(process **job, pid_t PID, const char *command) {
@@ -18,15 +17,19 @@ void pushJob(process **job, pid_t PID, const char *command) {
     printf("[%d] %d\n", newJob->index, newJob->id);
 }
 
+// TODO: Implement killing the process actually.
 void flush(process **head) {
     process *temp = *head, *prev = NULL;
+    // Case that child is still running
     while (temp != NULL && (waitpid(temp->id, NULL, WNOHANG)) != 0) {
         *head = temp->next;
         free(temp);
         temp = *head;
     }
     while (temp != NULL) {
+        // Case that we visit zombie child(ren)
         while (temp != NULL && (waitpid(temp->id, NULL, WNOHANG)) == 0) {
+            kill(temp->id, SIGKILL);
             prev = temp;
             temp = temp->next;
         }
@@ -60,9 +63,19 @@ void showJobs(process *jobs) {
     int i = 0;
     while (jobs != NULL) {
         i++;
-        char *status = waitpid(jobs->id, NULL, WNOHANG) > 0 ? "Done" :
-            waitpid(jobs->id, NULL, WNOHANG) == -1 ? "Error" : "Running";
+        char *status = waitpid(jobs->id, NULL, WNOHANG) == -1 ? "Error" : "Running";
         printf("\t[%d] (PID:%d) %s\t\t\t%s\n", jobs->index, jobs->id, status, jobs->command);
+        jobs = jobs->next;
+    }
+}
+
+void showFinishedJobs(process *jobs) {
+    int i = 0;
+    while (jobs != NULL) {
+        i++;
+        if (waitpid(jobs->id, NULL, WNOHANG) > 0) {
+            printf("\t[%d] (PID:%d) %s\t\t\t %s\n", jobs->index, jobs->id, "Done", jobs->command);
+        }
         jobs = jobs->next;
     }
 }

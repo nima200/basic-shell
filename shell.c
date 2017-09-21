@@ -7,16 +7,30 @@
 #include "process/management.h"
 #include "shell.h"
 
+struct process* jobsList = NULL;
 int main(void) {
-    char **args = malloc(20 * sizeof(char*));
-    struct process* jobs = NULL;
     int background;
     int redirect;
+    if (signal(SIGINT, Handle_SIGINT) == SIG_ERR) {
+        printf("ERROR: Could not bind signal handler for SIGINT. Exiting.\n");
+        exit(0);
+    }
+    if (signal(SIGTSTP, Handle_SIGTSTP) == SIG_ERR) {
+        printf("ERROR: Could not bind signal handler for SIGTSTP. Exiting.\n");
+        exit(0);
+    }
+    if (signal(SIGUSR2, Handle_SIGNLINE) == SIG_ERR) {
+        printf("ERROR: Could not bind signal handler for SIGNLINE. Exiting.\n");
+        exit(0);
+    }
     // TODO: Implement CWD prompt
     while (1) {
+        char **args = malloc(20 * sizeof(char*));
         background = 0;
         getCmd("\u03BB\t", args, &background, &redirect);
-        executeCmd(args, &background, &redirect, &jobs);
+        raise(SIGUSR2); // SIGUSER2 == New command entered
+        executeCmd(args, &background, &redirect, &jobsList);
+        free(args);
     }
 }
 /**
@@ -31,23 +45,17 @@ int main(void) {
  */
 int getCmd(char *prompt, char **args, int *background, int *redirect) {
     char *ampLoc, *redirectLoc;
-    char *line = NULL;
     size_t lineSize = strlen(prompt);
-    size_t length = 0;
-    // Allocate enough memory to the buffer for storing the prompt
-    line = malloc(lineSize * sizeof(char));
-    // Handle out of memory
-    if (line == NULL) {
-        printf("OUT OF MEMORY: Unable to allocate enough memory to buffer. Exiting\n");
-        exit(1);
-    }
+    char *line = malloc(lineSize * sizeof(char));
+    __ssize_t length = 0;
     // Show prompt to user and take in input
 
     printf("%s(PID: %d) >\t", prompt, getpid());
-    length = (size_t) getline(&line, &lineSize, stdin);
+    length = getline(&line, &lineSize, stdin);
     // Should never happen
     if (length <= 0) {
         perror("A fatal error has occurred. Exiting.");
+        free(line);
         exit(1);
     }
     // Check for background task flag: '&'
@@ -64,8 +72,8 @@ int getCmd(char *prompt, char **args, int *background, int *redirect) {
     } else {
         *redirect = 0;
     }
-    int argCount = parseCmd(args, &line);
-    // De-allocate the memory space previously allocated to the line buffer
+    char *line_copy = line;
+    int argCount = parseCmd(args, &line_copy);
     free(line);
     // Return the number of arguments in the command
     return argCount;
@@ -190,8 +198,8 @@ void executeCmd(char **args, const int *background, const int *redirect, process
                 dup2(out, STDOUT_FILENO);
                 close(out);
             } else {
-                showJobs(*jobList);
                 flush(jobList);
+                showJobs(*jobList);
             }
             break;
         }
@@ -202,5 +210,16 @@ void executeCmd(char **args, const int *background, const int *redirect, process
             createChildProcess(args[0], args, background, redirect, jobList);
             break;
     }
+}
+
+static void Handle_SIGINT() {
+    printf("\n");
+    exit(0);
+}
+
+static void Handle_SIGTSTP() {}
+
+static void Handle_SIGNLINE() {
+    showFinishedJobs(jobsList);
 }
 

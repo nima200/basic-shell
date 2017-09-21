@@ -25,12 +25,12 @@ int main(void) {
     }
     // TODO: Implement CWD prompt
     while (1) {
-        char **args = malloc(20 * sizeof(char*));
+        char *args[20];
+        args[0] = NULL;
         background = 0;
         getCmd("\u03BB\t", args, &background, &redirect);
         raise(SIGUSR2); // SIGUSER2 == New command entered
         executeCmd(args, &background, &redirect, &jobsList);
-        free(args);
     }
 }
 /**
@@ -46,7 +46,7 @@ int main(void) {
 int getCmd(char *prompt, char **args, int *background, int *redirect) {
     char *ampLoc, *redirectLoc;
     size_t lineSize = strlen(prompt);
-    char *line = malloc(lineSize * sizeof(char));
+    char *line = NULL;
     __ssize_t length = 0;
     // Show prompt to user and take in input
 
@@ -55,7 +55,6 @@ int getCmd(char *prompt, char **args, int *background, int *redirect) {
     // Should never happen
     if (length <= 0) {
         perror("A fatal error has occurred. Exiting.");
-        free(line);
         exit(1);
     }
     // Check for background task flag: '&'
@@ -74,7 +73,6 @@ int getCmd(char *prompt, char **args, int *background, int *redirect) {
     }
     char *line_copy = line;
     int argCount = parseCmd(args, &line_copy);
-    free(line);
     // Return the number of arguments in the command
     return argCount;
 }
@@ -154,6 +152,8 @@ createChildProcess(char *stringCommand, char **params, const int *background, co
 
 void executeCmd(char **args, const int *background, const int *redirect, process **jobList) {
     // Find whether the command is a system call 'internal' command or to be executed externally
+    if (args[0] == NULL)
+        return;
     command command = checkCommand(args[0]);
     switch (command) {
         case ls:
@@ -204,7 +204,6 @@ void executeCmd(char **args, const int *background, const int *redirect, process
             break;
         }
         case EXIT:
-            free(args);
             exit(0);
         case external:
             createChildProcess(args[0], args, background, redirect, jobList);

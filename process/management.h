@@ -17,4 +17,5 @@ void showJobs(struct process *jobs);
 pid_t getJob(process *jobs, int index);
 void foreground(process **head, int index);
 void showFinishedJobs(process *jobs);
+void slowDown();
 #endif //ASSIGNMENT1_MANAGEMENT_H
